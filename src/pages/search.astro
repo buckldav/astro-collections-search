@@ -1,0 +1,61 @@
+
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header />
+		<main>
+		</main>
+		<script>
+		import Fuse from "fuse.js"
+		async function onload() {
+			const search = new URLSearchParams(window.location.search);
+			const q = search.get("q") ?? "";
+			const res = await fetch("/api/blog.json");
+			const blog = await res.json();
+
+			const fuseOptions = {
+				includeScore: true,
+				keys: [
+					{
+						"name": "data.title", 
+						"weight": 0.7
+					}, 
+					{ 
+						"name":"data.description", 
+						"weight": 0.3
+					}
+				]
+			}
+			const fuse = new Fuse(blog, fuseOptions);
+			console.log(fuse.search(q))
+			
+			const mainEl = document.querySelector("main");
+			mainEl.innerHTML = `
+				<h2>Search Results for '${q}'</h2>
+				<ul></ul>
+			`
+			const resultsEl = document.querySelector("ul");
+			const TOLERANCE = 0.9; // 0.9 - 1.0 is pretty obscure
+			fuse.search(q).filter(r => r.score <= TOLERANCE).forEach(result => {
+				const li = document.createElement("li");
+				const post = result.item;
+				li.innerHTML = `<h4>${post.data.title}</h4><p>${post.data.description}</p>`
+				resultsEl.appendChild(li)
+				
+			});
+		}
+
+		window.onload = onload;	
+		</script>
+	</body>
+</html>
